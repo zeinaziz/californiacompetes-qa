@@ -1,0 +1,16 @@
+{
+  "name": "californiacompetes-qa",
+  "version": "1.0.0",
+  "description": "Weekly visual regression check for californiacompetes.org",
+  "scripts": {
+    "check": "node scripts/check.js",
+    "compare": "node scripts/compare.js",
+    "report": "node scripts/report.js",
+    "test": "node scripts/check.js && node scripts/compare.js && node scripts/report.js"
+  },
+  "dependencies": {
+    "playwright": "^1.45.0",
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0"
+  }
+}

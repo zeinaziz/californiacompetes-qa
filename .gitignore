@@ -1,0 +1,7 @@
+node_modules/
+current/
+diffs/
+results.json
+compare-results.json
+*.log
+.DS_Store

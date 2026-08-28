@@ -1,0 +1,66 @@
+name: Weekly Visual Check
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  visual-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run visual checks
+        run: node scripts/check.js
+        env:
+          # Optional: set a repo secret CF_CLEARANCE to get past Cloudflare.
+          CF_CLEARANCE: ${{ secrets.CF_CLEARANCE }}
+
+      - name: Compare screenshots
+        run: node scripts/compare.js
+
+      # report.js exits non-zero when pages are blocked, changed, or have
+      # functional issues. That failure should mark the run red, but we still
+      # want the artifact and the step summary, so those steps use if: always().
+      - name: Generate report
+        id: report
+        run: node scripts/report.js
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report-${{ github.run_id }}
+          path: |
+            reports/
+            diffs/
+          retention-days: 30
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Visual Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          LATEST=$(ls -t reports/*.md 2>/dev/null | head -n1)
+          if [ -n "$LATEST" ]; then
+            # Emit the Summary table and Status line from the generated report.
+            sed -n '/^## Summary/,/^## Detailed Results/p' "$LATEST" \
+              | sed '/^## Detailed Results/d' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ No report was generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
